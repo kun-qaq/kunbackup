@@ -28,6 +28,18 @@ backup.keep=3
 > 备份目录需要手动创建：服务器根目录下的 `backups/` 文件夹。
 > 如果目录不存在，备份会失败并在日志中提示路径。
 
+## 环境要求 / Requirements
+
+| 项目 / Item | 要求 / Requirement |
+|---|---|
+| Minecraft | **Java 版 26.2**（2026 年 6 月的 "Chaos Cubed"）；不支持 1.21.x 及更早版本 |
+| mod 加载器 | **Fabric Loader ≥ 0.19.0**；**仅支持 Fabric**，不支持 Forge / NeoForge，也不是 Paper/Spigot 插件 |
+| 依赖 mod | **Fabric API**（需安装 26.2 对应版本，如 `0.160.0+26.2`） |
+| Java | **25**（Minecraft 26.2 的自带要求，服务器需用 Java 25 运行） |
+| 运行端 | 为**专用服务端**设计，纯服务端 mod，玩家客户端不需要安装；单人模式装上也能加载但没意义 |
+
+> 版本对照提示：MC 26.2 起游戏本体未混淆且要求 Java 25；本 mod 就是按这套新工具链编译的，无法在旧版本（1.21.11 及以下）上运行。
+
 ## 安装 / Install
 
 1. 服务器需要 Fabric Loader + Fabric API（Minecraft 26.2）
