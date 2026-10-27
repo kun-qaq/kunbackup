@@ -1,0 +1,23 @@
+{
+	"schemaVersion": 1,
+	"id": "kunbackup",
+	"version": "${version}",
+	"name": "KunBackup",
+	"description": "Server-side backup mod.\n\n/backup zips the world folder into backups/. A daily automatic backup (default 04:00, configurable) keeps only the most recent 3 zips.",
+	"authors": [
+		"kun"
+	],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.kun.kunbackup.KunBackup"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.0",
+		"minecraft": ">=26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
