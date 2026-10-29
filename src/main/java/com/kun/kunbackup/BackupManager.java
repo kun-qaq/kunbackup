@@ -3,6 +3,9 @@ package com.kun.kunbackup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.LevelResource;
 
 import java.io.IOException;
@@ -17,8 +20,11 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,6 +42,8 @@ public class BackupManager {
     private static int backupHour = 4;
     /** 保留最近几个 zip，相当于保留最近 N 天（backup.keep） */
     private static int keepCount = 3;
+    /** 允许使用 /backup 的玩家名单（小写比较），来自 config 的 allowed.players，OP 始终允许 */
+    private static final Set<String> allowedPlayers = new HashSet<>();
 
     private static final AtomicBoolean backingUp = new AtomicBoolean(false);
     private static ScheduledExecutorService scheduler;
@@ -54,12 +62,20 @@ public class BackupManager {
                 }
                 backupHour = Integer.parseInt(props.getProperty("backup.hour", String.valueOf(backupHour)));
                 keepCount = Integer.parseInt(props.getProperty("backup.keep", String.valueOf(keepCount)));
+                allowedPlayers.clear();
+                for (String name : props.getProperty("allowed.players", "").split("[,;\\s]+")) {
+                    if (!name.isBlank()) allowedPlayers.add(name.trim().toLowerCase(Locale.ROOT));
+                }
             } else {
                 Properties props = new Properties();
                 props.setProperty("backup.hour", String.valueOf(backupHour));
                 props.setProperty("backup.keep", String.valueOf(keepCount));
+                props.setProperty("allowed.players", "");
                 try (OutputStream out = Files.newOutputStream(configFile)) {
-                    props.store(out, "KunBackup config: backup.hour = daily backup hour (0-23), backup.keep = how many daily zips to keep");
+                    props.store(out, "KunBackup config:\n"
+                            + " backup.hour     = daily auto backup hour, 0-23\n"
+                            + " backup.keep     = how many daily zip files to keep\n"
+                            + " allowed.players = comma separated player names allowed to run /backup (OP always allowed)");
                 }
             }
         } catch (Exception e) {
@@ -68,6 +84,27 @@ public class BackupManager {
         if (backupHour < 0 || backupHour > 23) backupHour = 4;
         if (keepCount < 1) keepCount = 1;
         KunBackup.LOGGER.info("[KunBackup] 配置: 每日 {} 点自动备份，保留最近 {} 个 zip。配置文件: {}", backupHour, keepCount, configFile);
+        KunBackup.LOGGER.info("[KunBackup] 可使用 /backup 的玩家名单: {}", allowedPlayers.isEmpty() ? "(空，仅 OP)" : allowedPlayers);
+    }
+
+    /** /backup reload：重新读取配置文件（时间、保留数量、玩家名单） */
+    public static void reloadConfig(MinecraftServer server) {
+        initConfig(server);
+    }
+
+    /**
+     * 判断某个命令来源是否有权使用备份功能：
+     * OP / 控制台（拥有 COMMANDS_GAMEMASTER 权限）始终允许，其余玩家必须在 allowed.players 名单里。
+     */
+    public static boolean isAllowed(CommandSourceStack source) {
+        if (source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+            return true;
+        }
+        Entity entity = source.getEntity();
+        if (entity instanceof ServerPlayer player) {
+            return allowedPlayers.contains(player.getName().getString().toLowerCase(Locale.ROOT));
+        }
+        return false;
     }
 
     // ------------------------------------------------------------- scheduler
